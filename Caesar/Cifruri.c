@@ -22,8 +22,11 @@ char positionToLowercaseLetter(int position){
 }
 
 char positionToUppercaseLetter(int position){
-    if(position>=alphabetSize){
+    if(position / alphabetSize  > 0){
         position = position % alphabetSize;
+    }
+    if(position < 0) {
+        position = alphabetSize - abs(position);
     }
     return alphabetUppercase[position];
 }
