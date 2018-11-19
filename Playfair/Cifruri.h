@@ -26,5 +26,6 @@ char* vigenereEncrypt(char* , char* );
 char* vigenereDecrypt(char* , char* );
 
 char* playfairEncrypt(char* , char, char,  char* );
+char* playfairDecrypt(char* , char, char,  char* );
 
 #endif

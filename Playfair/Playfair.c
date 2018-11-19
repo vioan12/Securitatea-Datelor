@@ -149,6 +149,7 @@ struct Slice* sliceExtract(char firstLetter, char secondLetter){
                         p++;
                     }
                 }
+                *slice->nrColumns=matrixSize;
             }
             if(*slice->nrColumns==1) {
                 for (int i = 0; i < matrixSize; i++) {
@@ -157,6 +158,7 @@ struct Slice* sliceExtract(char firstLetter, char secondLetter){
                         p++;
                     }
                 }
+                *slice->nrRows=matrixSize;
             }
         }
         return slice;
@@ -166,18 +168,105 @@ struct Slice* sliceExtract(char firstLetter, char secondLetter){
 
 struct TwoLetters* twoLettersExtract(struct Slice *slice, char firstLetter, char secondLetter, int sign)
 {
-    if(*slice->nrRows==1){
+    struct TwoLetters *twoLetters =  (struct TwoLetters*)malloc(sizeof(struct TwoLetters));
+    twoLetters->firstLetter = (char*)malloc(sizeof(char));
+    twoLetters->secondLetter = (char*)malloc(sizeof(char));
+    if(*slice->nrRows==1 && *slice->nrColumns>1){
+        int j=0;
+        while (j<*slice->nrColumns){
+            if(*(slice->matrix+j)==firstLetter){
+                break;
+            }
+            j++;
+        }
+        j=(j+(1*sign));
+
+        if(j>=*slice->nrColumns){
+            j=j%*slice->nrColumns;
+        }
+        if(j<0){
+            j=*slice->nrColumns+j;
+        }
+        *twoLetters->firstLetter = *(slice->matrix+j);
+
+        j=0;
+        while (j<*slice->nrColumns){
+            if(*(slice->matrix+j)==secondLetter){
+                break;
+            }
+            j++;
+        }
+        j=(j+(1*sign));
+
+        if(j>=*slice->nrColumns){
+            j=j%*slice->nrColumns;
+        }
+        if(j<0){
+            j=*slice->nrColumns+j;
+        }
+        *twoLetters->secondLetter = *(slice->matrix+j);
 
     }
-    if(*slice->nrColumns==1){
+    if(*slice->nrColumns==1 && *slice->nrRows>1){
+        int i=0;
+        while (i<*slice->nrRows){
+            if(*(slice->matrix+i)==firstLetter){
+                break;
+            }
+            i++;
+        }
+        i=(i+(1*sign));
 
-    }
-    if(*slice->nrRows==1 && *slice->nrColumns==1){
+        if(i>=*slice->nrRows){
+            i=i%*slice->nrRows;
+        }
+        if(i<0){
+            i=*slice->nrRows+i;
+        }
+        *twoLetters->firstLetter = *(slice->matrix+i);
 
+        i=0;
+        while (i<*slice->nrRows){
+            if(*(slice->matrix+i)==secondLetter){
+                break;
+            }
+            i++;
+        }
+        i=(i+(1*sign));
+
+        if(i>=*slice->nrRows){
+            i=i%*slice->nrRows;
+        }
+        if(i<0){
+            i=*slice->nrRows+i;
+        }
+        *twoLetters->secondLetter = *(slice->matrix+i);
     }
+    if(*slice->nrColumns>1 && *slice->nrRows>1){
+        if(*slice->matrix==firstLetter){
+            *twoLetters->firstLetter = *(slice->matrix+(*slice->nrColumns-1));
+            *twoLetters->secondLetter = *(slice->matrix+(*slice->nrRows-1)*(*slice->nrColumns));
+        }
+        if(*(slice->matrix+(*slice->nrColumns-1))==firstLetter){
+            *twoLetters->firstLetter = *slice->matrix;
+            *twoLetters->secondLetter = *(slice->matrix+(*slice->nrRows)*(*slice->nrColumns)-1);
+        }
+        if(*(slice->matrix+(*slice->nrRows-1)*(*slice->nrColumns))==firstLetter){
+            *twoLetters->firstLetter= *(slice->matrix+(*slice->nrRows)*(*slice->nrColumns)-1);
+            *twoLetters->secondLetter = *slice->matrix;
+        }
+        if(*(slice->matrix+(*slice->nrRows)*(*slice->nrColumns)-1)==firstLetter){
+            *twoLetters->firstLetter= *(slice->matrix+(*slice->nrRows-1)*(*slice->nrColumns));
+            *twoLetters->secondLetter = *(slice->matrix+(*slice->nrColumns-1));
+        }
+        if(*slice->nrColumns==1 && *slice->nrRows==1){
+            *twoLetters->firstLetter = *twoLetters->secondLetter = *slice->matrix;
+        }
+    }
+    return twoLetters;
 }
 
-char* playfairEncrypt(char *key, char translateLetter, char intoLetter, char *text ){
+char* playfairUniversal(char *key, char translateLetter, char intoLetter, char *text, int sign){
     if(textIsValid(key) && isUppercaseLetter(translateLetter) && isUppercaseLetter(intoLetter) && textIsValid(text)){
         char *newText,*r;
         mappingMatrix(replaceCharacter(translateLetter,intoLetter,key),translateLetter);
@@ -190,9 +279,18 @@ char* playfairEncrypt(char *key, char translateLetter, char intoLetter, char *te
         p=text;
         q=p+1;
         while(*(p+2)!='\000' && *(q+1)!='\000') {
-            slice=sliceExtract(*p,*q);
+            if(*p!=*q) {
+                slice = sliceExtract(*p, *q);
+                twoLetters=twoLettersExtract(slice, *p, *q, sign);
+            } else{
+                slice = sliceExtract(*p, 'X');
+                twoLetters=twoLettersExtract(slice, *p, 'X', sign);
+            }
+            *r=*twoLetters->firstLetter;
+            *(r+1)=*twoLetters->secondLetter;
             p = p + 2;
             q = q + 2;
+            r = r + 2;
             if(*(p)=='\000') {
                 break;
             }
@@ -202,11 +300,33 @@ char* playfairEncrypt(char *key, char translateLetter, char intoLetter, char *te
         }
         if(isUppercaseLetter(*p)){
             if(isUppercaseLetter(*q)){
-                slice=sliceExtract(*p,*q);
+                if(*p!=*q) {
+                    slice = sliceExtract(*p, *q);
+                    twoLetters=twoLettersExtract(slice, *p, *q, sign);
+                } else{
+                    slice = sliceExtract(*p, 'X');
+                    twoLetters=twoLettersExtract(slice, *p, 'X', sign);
+                }
+                *r=*twoLetters->firstLetter;
+                *(r+1)=*twoLetters->secondLetter;
+
             } else {
                 slice=sliceExtract(*p,'X');
+                twoLetters=twoLettersExtract(slice, *p, *q, sign);
+                *r=*twoLetters->firstLetter;
+                *(r+1)=*twoLetters->secondLetter;
             }
         }
+        return newText;
     }
     return NULL;
+}
+
+char* playfairEncrypt(char *key, char translateLetter, char intoLetter, char *text) {
+    return playfairUniversal(key, translateLetter, intoLetter, text, 1);
+
+}
+
+char* playfairDecrypt(char *key, char translateLetter, char intoLetter, char *text) {
+    return playfairUniversal(key, translateLetter, intoLetter, text, -1);
 }
